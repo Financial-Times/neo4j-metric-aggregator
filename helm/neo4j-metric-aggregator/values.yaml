@@ -1,0 +1,13 @@
+service:
+  name: "" # The name of the service, should be defined in the specific app-configs folder.
+  hasHealthcheck: "true"
+replicaCount: 2
+image:
+  repository: coco/neo4j-metric-aggregator
+  version: "" # should be set explicitly at installation
+  pullPolicy: IfNotPresent
+resources:
+  requests:
+    memory: 64Mi
+  limits:
+    memory: 256Mi

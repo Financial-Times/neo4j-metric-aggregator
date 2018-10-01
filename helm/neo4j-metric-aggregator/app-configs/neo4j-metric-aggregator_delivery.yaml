@@ -1,0 +1,2 @@
+service:
+  name: neo4j-metric-aggregator
