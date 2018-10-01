@@ -1,6 +1,7 @@
 package concept
 
 import (
+	"context"
 	"testing"
 
 	"github.com/johnnadratowski/golang-neo4j-bolt-driver/errors"
@@ -42,7 +43,7 @@ func TestGetConceptMetrics(t *testing.T) {
 		},
 	}
 
-	actualConcepts, err := ma.GetConceptMetrics(conceptUuids)
+	actualConcepts, err := ma.GetConceptMetrics(context.Background(), conceptUuids)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedConcepts, actualConcepts)
 	ac.AssertExpectations(t)
@@ -77,7 +78,7 @@ func TestGetConceptMetricsWithMissingResults(t *testing.T) {
 		},
 	}
 
-	actualConcepts, err := ma.GetConceptMetrics(conceptUuids)
+	actualConcepts, err := ma.GetConceptMetrics(context.Background(), conceptUuids)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedConcepts, actualConcepts)
 	ac.AssertExpectations(t)
@@ -98,7 +99,7 @@ func TestGetConceptMetricsWithNoResults(t *testing.T) {
 
 	expectedConcepts := []Concept{}
 
-	actualConcepts, err := ma.GetConceptMetrics(conceptUuids)
+	actualConcepts, err := ma.GetConceptMetrics(context.Background(), conceptUuids)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedConcepts, actualConcepts)
 	ac.AssertExpectations(t)
@@ -117,7 +118,7 @@ func TestGetConceptMetricsError(t *testing.T) {
 	ac.On("Count", conceptUuids).Return(map[string]int64{}, errors.New("computer says no"))
 	ma.annotationsCounter = ac
 
-	_, err := ma.GetConceptMetrics(conceptUuids)
+	_, err := ma.GetConceptMetrics(context.Background(), conceptUuids)
 	assert.Error(t, err)
 	ac.AssertExpectations(t)
 }
