@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -61,7 +62,7 @@ const testQueryParam = "?uuids=38ea6443-050e-4d02-9564-537490f84abd,a4de0e8f-96f
 
 func TestHappyGetMetrics(t *testing.T) {
 	ma := new(MockMetricsAggregator)
-	ma.On("GetConceptMetrics", testConceptsUUIDs).Return(testConcepts, nil)
+	ma.On("GetConceptMetrics", mock.AnythingOfType("*context.valueCtx"), testConceptsUUIDs).Return(testConcepts, nil)
 
 	h := NewConceptsMetricsHandler(ma, 10)
 	req := httptest.NewRequest("GET", "http://localhost:8080/concepts/metrics"+testQueryParam, nil)
@@ -130,7 +131,7 @@ func TestUUIDsBatchLimit(t *testing.T) {
 
 func TestMetricsAggregatorError(t *testing.T) {
 	ma := new(MockMetricsAggregator)
-	ma.On("GetConceptMetrics", testConceptsUUIDs).Return([]concept.Concept{}, errors.New("computer says no"))
+	ma.On("GetConceptMetrics", mock.AnythingOfType("*context.valueCtx"), testConceptsUUIDs).Return([]concept.Concept{}, errors.New("computer says no"))
 
 	h := NewConceptsMetricsHandler(ma, 10)
 	req := httptest.NewRequest("GET", "http://localhost:8080/concepts/metrics"+testQueryParam, nil)
@@ -150,7 +151,7 @@ type MockMetricsAggregator struct {
 	mock.Mock
 }
 
-func (m *MockMetricsAggregator) GetConceptMetrics(conceptUUIDs []string) ([]concept.Concept, error) {
-	args := m.Called(conceptUUIDs)
+func (m *MockMetricsAggregator) GetConceptMetrics(ctx context.Context, conceptUUIDs []string) ([]concept.Concept, error) {
+	args := m.Called(ctx, conceptUUIDs)
 	return args.Get(0).([]concept.Concept), args.Error(1)
 }

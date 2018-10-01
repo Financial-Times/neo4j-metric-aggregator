@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
 	"github.com/Financial-Times/neo4j-metric-aggregator/handlers"
 	"github.com/Financial-Times/neo4j-metric-aggregator/health"
@@ -12,13 +11,12 @@ import (
 	"github.com/husobee/vestigo"
 	"github.com/jawher/mow.cli"
 	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
-	"github.com/rcrowley/go-metrics"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
 	systemCode     = "neo4j-metric-aggregator"
-	appDescription = "An app to compute metrics on concepts in Neo4j"
+	appDescription = "An app to compute metrics on Neo4j knowledge base"
 )
 
 func main() {
@@ -61,7 +59,7 @@ func main() {
 
 	maxRequestBatchSize := app.Int(cli.IntOpt{
 		Name:   "maxRequestBatchSize",
-		Value:  20,
+		Value:  1000,
 		Desc:   "The maximum number of concepts per request",
 		EnvVar: "MAX_REQUEST_BATCH_SIZE",
 	})
@@ -96,15 +94,11 @@ func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healt
 
 	r.Get("/concepts/metrics", handler.GetMetrics)
 
-	var monitoringRouter http.Handler = r
-	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
-	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
-
 	http.HandleFunc("/__health", healthSvc.HealthCheckHandleFunc())
 	http.HandleFunc(status.GTGPath, status.NewGoodToGoHandler(healthSvc.GTG))
 	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 
-	http.Handle("/", monitoringRouter)
+	http.Handle("/", r)
 
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("Unable to start: %v", err)

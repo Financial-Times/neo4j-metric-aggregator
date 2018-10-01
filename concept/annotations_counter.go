@@ -34,7 +34,7 @@ func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]int64, 
 	queries, parameterSets := buildAnnotationsCountPipelineComponents(conceptUUIDs)
 	rows, err := conn.QueryPipeline(queries, parameterSets...)
 	if err != nil {
-		return nil, fmt.Errorf("error in executing query pipeline in Neo4j %v", err.Error())
+		return nil, fmt.Errorf("error in executing query pipeline in Neo4j: %v", err.Error())
 	}
 	counts := make(map[string]int64)
 
@@ -44,7 +44,7 @@ func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]int64, 
 	for rows != nil {
 		row, _, nextPipelineRows, err = rows.NextPipeline()
 		if err != nil {
-			return nil, fmt.Errorf("error in parsing query reults %v", err.Error())
+			return nil, fmt.Errorf("error in parsing query reults: %v", err.Error())
 		}
 		if row == nil {
 			rows = nextPipelineRows

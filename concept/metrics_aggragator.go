@@ -1,14 +1,16 @@
 package concept
 
 import (
+	"context"
 	"fmt"
 
+	tidUtils "github.com/Financial-Times/transactionid-utils-go"
 	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
 	log "github.com/sirupsen/logrus"
 )
 
 type MetricsAggregator interface {
-	GetConceptMetrics(conceptUUIDs []string) ([]Concept, error)
+	GetConceptMetrics(ctx context.Context, conceptUUIDs []string) ([]Concept, error)
 }
 
 func NewMetricsAggregator(driverPool bolt.DriverPool) MetricsAggregator {
@@ -20,11 +22,16 @@ type conceptMetricsAggregator struct {
 	annotationsCounter AnnotationsCounter
 }
 
-func (a *conceptMetricsAggregator) GetConceptMetrics(conceptUUIDs []string) ([]Concept, error) {
+func (a *conceptMetricsAggregator) GetConceptMetrics(ctx context.Context, conceptUUIDs []string) ([]Concept, error) {
+	logRead := log.
+		WithField(tidUtils.TransactionIDKey, ctx.Value(tidUtils.TransactionIDKey)).
+		WithField("batchSize", len(conceptUUIDs))
+
+	logRead.Info("computing annotations count for concept batch")
 	counts, err := a.annotationsCounter.Count(conceptUUIDs)
 	if err != nil {
-		log.WithError(err).Error("error in getting annotations count")
-		return nil, fmt.Errorf("error in getting annotations count %v", err.Error())
+		logRead.WithError(err).Error("error in getting annotations count for batch")
+		return nil, fmt.Errorf("error in getting annotations count: %v", err.Error())
 	}
 
 	concepts := []Concept{}
