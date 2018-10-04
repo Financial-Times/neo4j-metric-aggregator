@@ -24,6 +24,7 @@ func TestNewAnnotationsCounterConnectionError(t *testing.T) {
 
 	_, err = ac.Count([]string{uuid.New().String()})
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "error in creating a connection to Neo4j:")
 }
 
 func TestAnnotationsCounterTestSuite(t *testing.T) {
@@ -31,8 +32,8 @@ func TestAnnotationsCounterTestSuite(t *testing.T) {
 }
 
 func (suite *AnnotationsCounterTestSuite) SetupTest() {
-	getNeoTestURL(suite.T())
-	dp, err := bolt.NewDriverPool("bolt://localhost:7687", 10)
+	neoTestURL := getNeoTestURL(suite.T())
+	dp, err := bolt.NewDriverPool(neoTestURL, 10)
 	require.NoError(suite.T(), err)
 	suite.driverPool = dp
 }
