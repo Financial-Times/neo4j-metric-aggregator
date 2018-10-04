@@ -37,7 +37,7 @@ func TestHappyHealthCheck(t *testing.T) {
 
 	assert.True(t, result.Checks[0].Ok)
 	assert.Equal(t, "Neo4J is healthy", result.Checks[0].CheckOutput)
-	assert.Equal(t, "Neo4J is not available", result.Checks[0].TechnicalSummary)
+	assert.Equal(t, "App cannot compute concept metrics from Neo4j", result.Checks[0].TechnicalSummary)
 }
 
 func TestUnhappyHealthCheck(t *testing.T) {
@@ -62,7 +62,7 @@ func TestUnhappyHealthCheck(t *testing.T) {
 
 	assert.False(t, result.Checks[0].Ok)
 	assert.NotEqual(t, "Neo4J is healthy", result.Checks[0].CheckOutput)
-	assert.Equal(t, "Neo4J is not available", result.Checks[0].TechnicalSummary)
+	assert.Equal(t, "App cannot compute concept metrics from Neo4j", result.Checks[0].TechnicalSummary)
 }
 
 func TestHappyGTG(t *testing.T) {
