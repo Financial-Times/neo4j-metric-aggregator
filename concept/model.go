@@ -6,5 +6,10 @@ type Concept struct {
 }
 
 type Metrics struct {
-	AnnotationsCount int64 `json:"annotationsCount"`
+	AnnotationsCount Stats `json:"annotationsCount"`
+}
+
+type Stats struct {
+	RecentCount int64 `json:"recent"`
+	TotalCount  int64 `json:"total"`
 }

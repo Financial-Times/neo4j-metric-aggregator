@@ -29,6 +29,7 @@ func (a *conceptMetricsAggregator) GetConceptMetrics(ctx context.Context, concep
 
 	logRead.Info("computing annotations count for concept batch")
 	counts, err := a.annotationsCounter.Count(conceptUUIDs)
+
 	if err != nil {
 		logRead.WithError(err).Error("error in getting annotations count for batch")
 		return nil, fmt.Errorf("error in getting annotations count: %v", err.Error())
@@ -37,10 +38,10 @@ func (a *conceptMetricsAggregator) GetConceptMetrics(ctx context.Context, concep
 	concepts := []Concept{}
 
 	for _, conceptUUID := range conceptUUIDs {
-		count, ok := counts[conceptUUID]
+		stats, ok := counts[conceptUUID]
 		if ok {
 			c := Concept{UUID: conceptUUID}
-			c.Metrics = Metrics{AnnotationsCount: count}
+			c.Metrics = Metrics{AnnotationsCount: stats}
 			concepts = append(concepts, c)
 		}
 	}
