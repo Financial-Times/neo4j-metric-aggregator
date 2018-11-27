@@ -32,9 +32,11 @@ Download the source code, dependencies and test dependencies:
 
 2. Run the tests and install the binary:
 
-        dep ensure
-        go test -race ./...
-        go install
+    * Fetch all dependencies: `dep ensure`
+    * Run tests
+        * Unit tests only: `go test -race ./...`
+        * Unit and integration tests: `go test -race -tags=integration ./...`
+    * Install the binary: `go install`
 
 3. Run the binary (using the `help` flag to see the available optional arguments):
 
