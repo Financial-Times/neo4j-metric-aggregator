@@ -18,24 +18,37 @@ Download the source code, dependencies and test dependencies:
 
 ## Running locally
 
-1. Run the tests and install the binary:
+1. Run Neo4J
+
+	For running integration tests:
+
+```
+	docker run \
+		--publish=7474:7474 --publish=7687:7687 \
+		-e NEO4J_ACCEPT_LICENSE_AGREEMENT="yes" \
+		-e NEO4J_AUTH="none" \
+		neo4j:3.2.7-enterprise
+```
+
+2. Run the tests and install the binary:
 
         dep ensure
         go test -race ./...
         go install
 
-2. Run the binary (using the `help` flag to see the available optional arguments):
+3. Run the binary (using the `help` flag to see the available optional arguments):
 
         $GOPATH/bin/neo4j-metric-aggregator [--help]
 
         Options:
                      
-            --app-system-code         System Code of the application (env $APP_SYSTEM_CODE) (default "neo4j-metric-aggregator")
-            --app-name                Application name (env $APP_NAME) (default "neo4j-metric-aggregator")
-            --port                    Port to listen on (env $PORT) (default "8080")
-            --neo4j-endpoint          URL of the Neo4j bolt endpoint (env $NEO4J_ENDPOINT) (default "bolt://localhost:7687")
-            --neo4j-max-connections   The maximum number of parallel connections to Neo4J (env $NEO4J_MAX_CONNECTIONS) (default 10)
-            --maxRequestBatchSize     The maximum number of concepts per request (env $MAX_REQUEST_BATCH_SIZE) (default 20)
+            --app-system-code         		System Code of the application (env $APP_SYSTEM_CODE) (default "neo4j-metric-aggregator")
+            --app-name                		Application name (env $APP_NAME) (default "neo4j-metric-aggregator")
+            --port                    		Port to listen on (env $PORT) (default "8080")
+            --neo4j-endpoint          		URL of the Neo4j bolt endpoint (env $NEO4J_ENDPOINT) (default "bolt://localhost:7687")
+            --neo4j-max-connections   		The maximum number of parallel connections to Neo4J (env $NEO4J_MAX_CONNECTIONS) (default 10)
+            --maxRequestBatchSize     		The maximum number of concepts per request (env $MAX_REQUEST_BATCH_SIZE) (default 20)
+			--recentAnnotationsCountAge		max age of counted annotations in recentAnnotations in seconds (env #RECENT_ANNOTATIONS_COUNT_AGE) (default 604800)
 
 
 ## Build and deployment
@@ -59,19 +72,28 @@ An example is provided below:
     {
         "uuid": "d6b12f0c-bf3f-4045-a07b-1e4e49103fd1",
         "metrics": {
-            "annotationsCount": 37152
+			"annotationsCount": {
+				"recent": 2,
+				"total": 125
+			}
         }
     },
     {
         "uuid": "a4de0e8f-96f4-4ccf-ba26-410f005e021b",
         "metrics": {
-            "annotationsCount": 2
+            "annotationsCount": {
+				"recent": 0,
+				"total": 1250
+			}
         }
     },    
     {
         "uuid": "e5115380-59db-41cf-9356-672f73d6208f",
         "metrics": {
-            "annotationsCount": 3349
+			"annotationsCount": {
+				"recent": 0,
+				"total": 0
+			}
         }
     }
 ]

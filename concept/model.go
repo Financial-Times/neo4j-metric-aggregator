@@ -10,6 +10,6 @@ type Metrics struct {
 }
 
 type Stats struct {
-	RecentCount int64 `json:"recent"`
-	TotalCount  int64 `json:"total"`
+	Recent int64 `json:"recent"`
+	Total  int64 `json:"total"`
 }

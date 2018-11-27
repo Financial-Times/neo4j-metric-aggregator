@@ -11,9 +11,14 @@ const countAnnotationsQuery = `
 	MATCH (canonicalConcept :Concept{prefUUID:{uuid}})<-[:EQUIVALENT_TO]-(x:Concept)
 	OPTIONAL MATCH (x)-[]-(content:Content)
 	WITH canonicalConcept, count(content) AS totalCount, COLLECT(DISTINCT(content)) as contentList
-	UNWIND contentList as cl
+    UNWIND
+		CASE
+		  WHEN contentList = []
+			 THEN [null]
+		  ELSE contentList
+		END AS cl
 	MATCH (cl)
-	WHERE cl.publishedDateEpoch > {since}
+	WHERE cl.publishedDateEpoch > {since} OR cl IS null 
 	RETURN canonicalConcept.prefUUID, count(cl) AS recentCount, totalCount
 `
 
@@ -21,12 +26,13 @@ type AnnotationsCounter interface {
 	Count(conceptUUIDs []string) (map[string]Stats, error)
 }
 
-func NewAnnotationsCounter(driverPool bolt.DriverPool) AnnotationsCounter {
-	return &neoAnnotationsCounter{driverPool}
+func NewAnnotationsCounter(driverPool bolt.DriverPool, recentAnnotationsCountAge int) AnnotationsCounter {
+	return &neoAnnotationsCounter{driverPool, recentAnnotationsCountAge}
 }
 
 type neoAnnotationsCounter struct {
-	driverPool bolt.DriverPool
+	driverPool                bolt.DriverPool
+	recentAnnotationsCountAge int
 }
 
 func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Stats, error) {
@@ -36,7 +42,7 @@ func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Stats, 
 	}
 	defer conn.Close()
 
-	queries, parameterSets := buildAnnotationsCountPipelineComponents(conceptUUIDs)
+	queries, parameterSets := buildAnnotationsCountPipelineComponents(conceptUUIDs, c.recentAnnotationsCountAge)
 	rows, err := conn.QueryPipeline(queries, parameterSets...)
 	if err != nil {
 		return nil, fmt.Errorf("error in executing query pipeline in Neo4j: %v", err.Error())
@@ -57,22 +63,24 @@ func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Stats, 
 		}
 		conceptUUID, ok := row[0].(string)
 		if ok {
-			retval[conceptUUID] = Stats{row[1].(int64), row[2].(int64)}
+			recentCount := row[1].(int64)
+			totalCount := row[2].(int64)
+			retval[conceptUUID] = Stats{recentCount, totalCount}
 		}
 	}
 
 	return retval, nil
 }
 
-func buildAnnotationsCountPipelineComponents(conceptUUIDs []string) ([]string, []map[string]interface{}) {
+func buildAnnotationsCountPipelineComponents(conceptUUIDs []string, recentAnnotationsCountAge int) ([]string, []map[string]interface{}) {
 	var queries []string
 	var parameterSets []map[string]interface{}
 
 	now := int64(time.Now().Unix())
-	weekAgo := now - 7*24*3600
+	recentPeriodStart := now - int64(recentAnnotationsCountAge)
 	for _, uuid := range conceptUUIDs {
 		queries = append(queries, countAnnotationsQuery)
-		params := map[string]interface{}{"uuid": uuid, "since": weekAgo}
+		params := map[string]interface{}{"uuid": uuid, "since": recentPeriodStart}
 		parameterSets = append(parameterSets, params)
 	}
 	return queries, parameterSets
