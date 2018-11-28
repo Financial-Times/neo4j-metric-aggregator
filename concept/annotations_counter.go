@@ -23,31 +23,30 @@ const countAnnotationsQuery = `
 `
 
 type AnnotationsCounter interface {
-	Count(conceptUUIDs []string) (map[string]Stats, error)
+	Count(conceptUUIDs []string) (map[string]Metrics, error)
 }
 
-func NewAnnotationsCounter(driverPool bolt.DriverPool, recentAnnotationsCountAge int) AnnotationsCounter {
-	return &neoAnnotationsCounter{driverPool, recentAnnotationsCountAge}
+func NewAnnotationsCounter(driverPool bolt.DriverPool) AnnotationsCounter {
+	return &neoAnnotationsCounter{driverPool}
 }
 
 type neoAnnotationsCounter struct {
-	driverPool                bolt.DriverPool
-	recentAnnotationsCountAge int
+	driverPool bolt.DriverPool
 }
 
-func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Stats, error) {
+func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Metrics, error) {
 	conn, err := c.driverPool.OpenPool()
 	if err != nil {
 		return nil, fmt.Errorf("error in creating a connection to Neo4j: %v", err.Error())
 	}
 	defer conn.Close()
 
-	queries, parameterSets := buildAnnotationsCountPipelineComponents(conceptUUIDs, c.recentAnnotationsCountAge)
+	queries, parameterSets := buildAnnotationsCountPipelineComponents(conceptUUIDs)
 	rows, err := conn.QueryPipeline(queries, parameterSets...)
 	if err != nil {
 		return nil, fmt.Errorf("error in executing query pipeline in Neo4j: %v", err.Error())
 	}
-	retval := make(map[string]Stats)
+	retval := make(map[string]Metrics)
 
 	var row []interface{}
 	var nextPipelineRows bolt.PipelineRows
@@ -63,24 +62,24 @@ func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Stats, 
 		}
 		conceptUUID, ok := row[0].(string)
 		if ok {
-			recentCount := row[1].(int64)
+			weekAnnotationsCount := row[1].(int64)
 			totalCount := row[2].(int64)
-			retval[conceptUUID] = Stats{recentCount, totalCount}
+			retval[conceptUUID] = Metrics{WeekAnnotationsCount: weekAnnotationsCount, AnnotationsCount: totalCount}
 		}
 	}
 
 	return retval, nil
 }
 
-func buildAnnotationsCountPipelineComponents(conceptUUIDs []string, recentAnnotationsCountAge int) ([]string, []map[string]interface{}) {
+func buildAnnotationsCountPipelineComponents(conceptUUIDs []string) ([]string, []map[string]interface{}) {
 	var queries []string
 	var parameterSets []map[string]interface{}
 
 	now := int64(time.Now().Unix())
-	recentPeriodStart := now - int64(recentAnnotationsCountAge)
+	weekAgo := now - 7*24*3600
 	for _, uuid := range conceptUUIDs {
 		queries = append(queries, countAnnotationsQuery)
-		params := map[string]interface{}{"uuid": uuid, "since": recentPeriodStart}
+		params := map[string]interface{}{"uuid": uuid, "since": weekAgo}
 		parameterSets = append(parameterSets, params)
 	}
 	return queries, parameterSets

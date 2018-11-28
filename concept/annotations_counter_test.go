@@ -15,8 +15,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const recentAnnotationsCountAge = 7 * 24 * 3600
-
 type AnnotationsCounterTestSuite struct {
 	suite.Suite
 	driverPool bolt.DriverPool
@@ -25,7 +23,7 @@ type AnnotationsCounterTestSuite struct {
 func TestNewAnnotationsCounterConnectionError(t *testing.T) {
 	dp, err := bolt.NewDriverPool("bolt://localhost:80", 10)
 	require.NoError(t, err)
-	ac := NewAnnotationsCounter(dp, recentAnnotationsCountAge)
+	ac := NewAnnotationsCounter(dp)
 
 	_, err = ac.Count([]string{uuid.New().String()})
 	assert.Error(t, err)
@@ -52,14 +50,14 @@ func (suite *AnnotationsCounterTestSuite) TestCountSingleValue() {
 	expectedAnnotationsCount := 25
 	suite.writeTestConceptWithAnnotations(conceptUUID, 3, expectedAnnotationsCount)
 
-	ac := NewAnnotationsCounter(suite.driverPool, recentAnnotationsCountAge)
+	ac := NewAnnotationsCounter(suite.driverPool)
 	counts, err := ac.Count([]string{conceptUUID})
 
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), counts, 1)
 
-	assert.Equal(suite.T(), int64(9), counts[conceptUUID].Recent)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount), counts[conceptUUID].Total)
+	assert.Equal(suite.T(), int64(9), counts[conceptUUID].WeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount), counts[conceptUUID].AnnotationsCount)
 }
 
 func (suite *AnnotationsCounterTestSuite) TestCountMultiValue() {
@@ -87,18 +85,18 @@ func (suite *AnnotationsCounterTestSuite) TestCountMultiValue() {
 		conceptUUID4,
 	}
 
-	ac := NewAnnotationsCounter(suite.driverPool, recentAnnotationsCountAge)
+	ac := NewAnnotationsCounter(suite.driverPool)
 	counts, err := ac.Count(uuids)
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), counts, 4)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1].Total)
-	assert.Equal(suite.T(), int64(9), counts[conceptUUID1].Recent)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2].Total)
-	assert.Equal(suite.T(), int64(4), counts[conceptUUID2].Recent)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount3), counts[conceptUUID3].Total)
-	assert.Equal(suite.T(), int64(412), counts[conceptUUID3].Recent)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount4), counts[conceptUUID4].Total)
-	assert.Equal(suite.T(), int64(0), counts[conceptUUID4].Recent)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1].AnnotationsCount)
+	assert.Equal(suite.T(), int64(9), counts[conceptUUID1].WeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2].AnnotationsCount)
+	assert.Equal(suite.T(), int64(4), counts[conceptUUID2].WeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount3), counts[conceptUUID3].AnnotationsCount)
+	assert.Equal(suite.T(), int64(412), counts[conceptUUID3].WeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount4), counts[conceptUUID4].AnnotationsCount)
+	assert.Equal(suite.T(), int64(0), counts[conceptUUID4].WeekAnnotationsCount)
 }
 
 func (suite *AnnotationsCounterTestSuite) TestCountWithMissingConcepts() {
@@ -120,12 +118,12 @@ func (suite *AnnotationsCounterTestSuite) TestCountWithMissingConcepts() {
 		conceptUUID4,
 	}
 
-	ac := NewAnnotationsCounter(suite.driverPool, recentAnnotationsCountAge)
+	ac := NewAnnotationsCounter(suite.driverPool)
 	counts, err := ac.Count(uuids)
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), counts, 2)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1].Total)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2].Total)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2].AnnotationsCount)
 }
 
 func getNeoTestURL(t *testing.T) string {
@@ -172,7 +170,7 @@ func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(concep
 			if isRecent {
 				pubDate = now
 			} else {
-				pubDate = now - recentAnnotationsCountAge - 24*3600
+				pubDate = now - 7*24*3600 - 24*3600
 			}
 			_, err = conn.ExecNeo("MATCH (n:Concept{uuid: {uuid}}) CREATE (n)<-[:REL]-(c:Content{publishedDateEpoch: {pubDate}})",
 				map[string]interface{}{"uuid": equivalentConceptUUID, "pubDate": pubDate})

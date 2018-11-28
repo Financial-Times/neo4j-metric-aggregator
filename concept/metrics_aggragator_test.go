@@ -17,10 +17,10 @@ func TestGetConceptMetrics(t *testing.T) {
 		"f7885509-c029-496b-87dd-aecf1ca138d7",
 	}
 
-	countResult := map[string]Stats{
-		"601a5957-74ab-4eab-8a43-4596355c9420": Stats{3, 5},
-		"082a9fcc-5a88-48c5-bd60-64ba154204df": Stats{123, 1000},
-		"f7885509-c029-496b-87dd-aecf1ca138d7": Stats{4, 1024},
+	countResult := map[string]Metrics{
+		"601a5957-74ab-4eab-8a43-4596355c9420": Metrics{3, 5},
+		"082a9fcc-5a88-48c5-bd60-64ba154204df": Metrics{123, 1000},
+		"f7885509-c029-496b-87dd-aecf1ca138d7": Metrics{4, 1024},
 	}
 
 	ma := new(conceptMetricsAggregator)
@@ -31,15 +31,15 @@ func TestGetConceptMetrics(t *testing.T) {
 	expectedConcepts := []Concept{
 		{
 			"601a5957-74ab-4eab-8a43-4596355c9420",
-			Metrics{Stats{3, 5}},
+			Metrics{3, 5},
 		},
 		{
 			"082a9fcc-5a88-48c5-bd60-64ba154204df",
-			Metrics{Stats{123, 1000}},
+			Metrics{123, 1000},
 		},
 		{
 			"f7885509-c029-496b-87dd-aecf1ca138d7",
-			Metrics{Stats{4, 1024}},
+			Metrics{4, 1024},
 		},
 	}
 
@@ -57,9 +57,9 @@ func TestGetConceptMetricsWithMissingResults(t *testing.T) {
 		"f7885509-c029-496b-87dd-aecf1ca138d7",
 	}
 
-	countResult := map[string]Stats{
-		"601a5957-74ab-4eab-8a43-4596355c9420": Stats{3, 113},
-		"f7885509-c029-496b-87dd-aecf1ca138d7": Stats{4, 1024},
+	countResult := map[string]Metrics{
+		"601a5957-74ab-4eab-8a43-4596355c9420": Metrics{3, 113},
+		"f7885509-c029-496b-87dd-aecf1ca138d7": Metrics{4, 1024},
 	}
 
 	ma := new(conceptMetricsAggregator)
@@ -70,15 +70,11 @@ func TestGetConceptMetricsWithMissingResults(t *testing.T) {
 	expectedConcepts := []Concept{
 		{
 			"601a5957-74ab-4eab-8a43-4596355c9420",
-			Metrics{
-				Stats{3, 113},
-			},
+			Metrics{3, 113},
 		},
 		{
 			"f7885509-c029-496b-87dd-aecf1ca138d7",
-			Metrics{
-				Stats{4, 1024},
-			},
+			Metrics{4, 1024},
 		},
 	}
 
@@ -98,7 +94,7 @@ func TestGetConceptMetricsWithNoResults(t *testing.T) {
 
 	ma := new(conceptMetricsAggregator)
 	ac := new(MockAnnotationCounter)
-	ac.On("Count", conceptUuids).Return(map[string]Stats{}, nil)
+	ac.On("Count", conceptUuids).Return(map[string]Metrics{}, nil)
 	ma.annotationsCounter = ac
 
 	expectedConcepts := []Concept{}
@@ -119,7 +115,7 @@ func TestGetConceptMetricsError(t *testing.T) {
 
 	ma := new(conceptMetricsAggregator)
 	ac := new(MockAnnotationCounter)
-	ac.On("Count", conceptUuids).Return(map[string]Stats{}, errors.New("computer says no"))
+	ac.On("Count", conceptUuids).Return(map[string]Metrics{}, errors.New("computer says no"))
 	ma.annotationsCounter = ac
 
 	_, err := ma.GetConceptMetrics(context.Background(), conceptUuids)
@@ -131,7 +127,7 @@ type MockAnnotationCounter struct {
 	mock.Mock
 }
 
-func (m *MockAnnotationCounter) Count(conceptUUIDs []string) (map[string]Stats, error) {
+func (m *MockAnnotationCounter) Count(conceptUUIDs []string) (map[string]Metrics, error) {
 	args := m.Called(conceptUUIDs)
-	return args.Get(0).(map[string]Stats), args.Error(1)
+	return args.Get(0).(map[string]Metrics), args.Error(1)
 }

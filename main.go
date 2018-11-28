@@ -64,13 +64,6 @@ func main() {
 		EnvVar: "MAX_REQUEST_BATCH_SIZE",
 	})
 
-	recentAnnotationsCountAge := app.Int(cli.IntOpt{
-		Name:   "recentAnnotationsCountAge",
-		Value:  7 * 24 * 3600,
-		Desc:   "How far back recentAnnotationsCount is counted (in seconds)",
-		EnvVar: "RECENT_ANNOTATIONS_COUNT_AGE",
-	})
-
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetLevel(log.InfoLevel)
 	log.Infof("[Startup] %v is starting", *appSystemCode)
@@ -85,7 +78,7 @@ func main() {
 				Fatal("Unable to create a connection pool to neo4j")
 		}
 
-		aggregator := concept.NewMetricsAggregator(driverPool, *recentAnnotationsCountAge)
+		aggregator := concept.NewMetricsAggregator(driverPool)
 		h := handlers.NewConceptsMetricsHandler(aggregator, *maxRequestBatchSize)
 
 		healthSvc := health.NewHealthService(*appSystemCode, *appName, appDescription, driverPool)

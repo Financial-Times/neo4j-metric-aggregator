@@ -13,8 +13,8 @@ type MetricsAggregator interface {
 	GetConceptMetrics(ctx context.Context, conceptUUIDs []string) ([]Concept, error)
 }
 
-func NewMetricsAggregator(driverPool bolt.DriverPool, recentAnnotationsCountAge int) MetricsAggregator {
-	ac := NewAnnotationsCounter(driverPool, recentAnnotationsCountAge)
+func NewMetricsAggregator(driverPool bolt.DriverPool) MetricsAggregator {
+	ac := NewAnnotationsCounter(driverPool)
 	return &conceptMetricsAggregator{ac}
 }
 
@@ -38,10 +38,9 @@ func (a *conceptMetricsAggregator) GetConceptMetrics(ctx context.Context, concep
 	concepts := []Concept{}
 
 	for _, conceptUUID := range conceptUUIDs {
-		stats, ok := counts[conceptUUID]
+		metrics, ok := counts[conceptUUID]
 		if ok {
-			c := Concept{UUID: conceptUUID}
-			c.Metrics = Metrics{AnnotationsCount: stats}
+			c := Concept{conceptUUID, metrics}
 			concepts = append(concepts, c)
 		}
 	}
