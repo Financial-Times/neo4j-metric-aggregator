@@ -75,7 +75,7 @@ func buildAnnotationsCountPipelineComponents(conceptUUIDs []string) ([]string, [
 	var queries []string
 	var parameterSets []map[string]interface{}
 
-	now := int64(time.Now().Unix())
+	now := time.Now().Unix()
 	weekAgo := now - 7*24*3600
 	for _, uuid := range conceptUUIDs {
 		queries = append(queries, countAnnotationsQuery)

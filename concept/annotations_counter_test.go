@@ -162,7 +162,7 @@ func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(concep
 			subCount += annotationCount % equivalentConcepts
 		}
 
-		now := int64(time.Now().Unix())
+		now := time.Now().Unix()
 		for j := 0; j < subCount; j++ {
 			isRecent := j%3 == 0
 
