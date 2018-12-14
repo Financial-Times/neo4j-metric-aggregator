@@ -62,9 +62,9 @@ func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Metrics
 		}
 		conceptUUID, ok := row[0].(string)
 		if ok {
-			weekAnnotationsCount := row[1].(int64)
+			prevWeekAnnotationsCount := row[1].(int64)
 			totalCount := row[2].(int64)
-			retval[conceptUUID] = Metrics{WeekAnnotationsCount: weekAnnotationsCount, AnnotationsCount: totalCount}
+			retval[conceptUUID] = Metrics{PrevWeekAnnotationsCount: prevWeekAnnotationsCount, AnnotationsCount: totalCount}
 		}
 	}
 

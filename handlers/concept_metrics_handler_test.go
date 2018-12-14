@@ -23,15 +23,15 @@ var testConceptsUUIDs = []string{
 var testConcepts = []concept.Concept{
 	{
 		UUID:    testConceptsUUIDs[0],
-		Metrics: concept.Metrics{AnnotationsCount: 1, WeekAnnotationsCount: 2},
+		Metrics: concept.Metrics{AnnotationsCount: 1, PrevWeekAnnotationsCount: 2},
 	},
 	{
 		UUID:    testConceptsUUIDs[1],
-		Metrics: concept.Metrics{AnnotationsCount: 123, WeekAnnotationsCount: 1024},
+		Metrics: concept.Metrics{AnnotationsCount: 123, PrevWeekAnnotationsCount: 1024},
 	},
 	{
 		UUID:    testConceptsUUIDs[2],
-		Metrics: concept.Metrics{AnnotationsCount: 12, WeekAnnotationsCount: 52},
+		Metrics: concept.Metrics{AnnotationsCount: 12, PrevWeekAnnotationsCount: 52},
 	},
 }
 
@@ -41,21 +41,21 @@ const testJSONPayload = `
     "uuid": "38ea6443-050e-4d02-9564-537490f84abd",
     "metrics": {
 	  "annotationsCount": 1,
-	  "weekAnnotationsCount": 2
+	  "prevWeekAnnotationsCount": 2
     }
   },
   {
     "uuid": "a4de0e8f-96f4-4ccf-ba26-410f005e021b",
     "metrics": {
       "annotationsCount": 123,
-	  "weekAnnotationsCount": 1024
+	  "prevWeekAnnotationsCount": 1024
     }
   },
   {
     "uuid": "e25c0e2c-e275-403b-8fd8-9f079634cae9",
     "metrics": {
       "annotationsCount": 12,
-	  "weekAnnotationsCount": 52
+	  "prevWeekAnnotationsCount": 52
     }
   }
 ]

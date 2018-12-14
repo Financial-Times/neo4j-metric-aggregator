@@ -6,6 +6,6 @@ type Concept struct {
 }
 
 type Metrics struct {
-	AnnotationsCount     int64 `json:"annotationsCount"`
-	WeekAnnotationsCount int64 `json:"weekAnnotationsCount"`
+	AnnotationsCount         int64 `json:"annotationsCount"`
+	PrevWeekAnnotationsCount int64 `json:"prevWeekAnnotationsCount"`
 }
