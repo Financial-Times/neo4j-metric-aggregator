@@ -29,6 +29,8 @@ Download the source code, dependencies and test dependencies:
 		-e NEO4J_AUTH="none" \
 		neo4j:3.2.7-enterprise
 ```
+Note: The version of neo4j should be the same as the one used by CircleCI 
+
 
 2. Run the tests and install the binary:
 
