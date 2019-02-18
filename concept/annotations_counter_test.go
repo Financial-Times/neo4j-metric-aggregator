@@ -64,18 +64,22 @@ func (suite *AnnotationsCounterTestSuite) TestCountMultiValue() {
 
 	conceptUUID1 := uuid.New().String()
 	expectedAnnotationsCount1 := 25
+	expectedPrevAnnotationsCount1 := 9
 	suite.writeTestConceptWithAnnotations(conceptUUID1, 3, expectedAnnotationsCount1)
 
 	conceptUUID2 := uuid.New().String()
 	expectedAnnotationsCount2 := 10
+	expectedPrevAnnotationsCount2 := 4
 	suite.writeTestConceptWithAnnotations(conceptUUID2, 1, expectedAnnotationsCount2)
 
 	conceptUUID3 := uuid.New().String()
 	expectedAnnotationsCount3 := 1234
+	expectedPrevAnnotationsCount3 := 412
 	suite.writeTestConceptWithAnnotations(conceptUUID3, 5, expectedAnnotationsCount3)
 
 	conceptUUID4 := uuid.New().String()
 	expectedAnnotationsCount4 := 0
+	expectedPrevAnnotationsCount4 := 0
 	suite.writeTestConceptWithAnnotations(conceptUUID4, 3, expectedAnnotationsCount4)
 
 	uuids := []string{
@@ -90,13 +94,13 @@ func (suite *AnnotationsCounterTestSuite) TestCountMultiValue() {
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), counts, 4)
 	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1].AnnotationsCount)
-	assert.Equal(suite.T(), int64(9), counts[conceptUUID1].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedPrevAnnotationsCount1), counts[conceptUUID1].PrevWeekAnnotationsCount)
 	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2].AnnotationsCount)
-	assert.Equal(suite.T(), int64(4), counts[conceptUUID2].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedPrevAnnotationsCount2), counts[conceptUUID2].PrevWeekAnnotationsCount)
 	assert.Equal(suite.T(), int64(expectedAnnotationsCount3), counts[conceptUUID3].AnnotationsCount)
-	assert.Equal(suite.T(), int64(412), counts[conceptUUID3].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedPrevAnnotationsCount3), counts[conceptUUID3].PrevWeekAnnotationsCount)
 	assert.Equal(suite.T(), int64(expectedAnnotationsCount4), counts[conceptUUID4].AnnotationsCount)
-	assert.Equal(suite.T(), int64(0), counts[conceptUUID4].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedPrevAnnotationsCount4), counts[conceptUUID4].PrevWeekAnnotationsCount)
 }
 
 func (suite *AnnotationsCounterTestSuite) TestCountWithMissingConcepts() {
