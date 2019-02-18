@@ -50,7 +50,6 @@ Download the source code, dependencies and test dependencies:
             --neo4j-endpoint          		URL of the Neo4j bolt endpoint (env $NEO4J_ENDPOINT) (default "bolt://localhost:7687")
             --neo4j-max-connections   		The maximum number of parallel connections to Neo4J (env $NEO4J_MAX_CONNECTIONS) (default 10)
             --maxRequestBatchSize     		The maximum number of concepts per request (env $MAX_REQUEST_BATCH_SIZE) (default 20)
-			--recentAnnotationsCountAge		max age of counted annotations in recentAnnotations in seconds (env #RECENT_ANNOTATIONS_COUNT_AGE) (default 604800)
 
 
 ## Build and deployment
