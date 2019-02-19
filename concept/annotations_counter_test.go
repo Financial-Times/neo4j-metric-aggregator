@@ -1,8 +1,11 @@
+// +build integration
+
 package concept
 
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -49,26 +52,34 @@ func (suite *AnnotationsCounterTestSuite) TestCountSingleValue() {
 
 	ac := NewAnnotationsCounter(suite.driverPool)
 	counts, err := ac.Count([]string{conceptUUID})
+
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), counts, 1)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount), counts[conceptUUID])
+
+	assert.Equal(suite.T(), int64(9), counts[conceptUUID].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount), counts[conceptUUID].AnnotationsCount)
 }
 
 func (suite *AnnotationsCounterTestSuite) TestCountMultiValue() {
+
 	conceptUUID1 := uuid.New().String()
 	expectedAnnotationsCount1 := 25
+	expectedPrevAnnotationsCount1 := 9
 	suite.writeTestConceptWithAnnotations(conceptUUID1, 3, expectedAnnotationsCount1)
 
 	conceptUUID2 := uuid.New().String()
 	expectedAnnotationsCount2 := 10
+	expectedPrevAnnotationsCount2 := 4
 	suite.writeTestConceptWithAnnotations(conceptUUID2, 1, expectedAnnotationsCount2)
 
 	conceptUUID3 := uuid.New().String()
 	expectedAnnotationsCount3 := 1234
+	expectedPrevAnnotationsCount3 := 412
 	suite.writeTestConceptWithAnnotations(conceptUUID3, 5, expectedAnnotationsCount3)
 
 	conceptUUID4 := uuid.New().String()
 	expectedAnnotationsCount4 := 0
+	expectedPrevAnnotationsCount4 := 0
 	suite.writeTestConceptWithAnnotations(conceptUUID4, 3, expectedAnnotationsCount4)
 
 	uuids := []string{
@@ -82,10 +93,14 @@ func (suite *AnnotationsCounterTestSuite) TestCountMultiValue() {
 	counts, err := ac.Count(uuids)
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), counts, 4)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1])
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2])
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount3), counts[conceptUUID3])
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount4), counts[conceptUUID4])
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedPrevAnnotationsCount1), counts[conceptUUID1].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedPrevAnnotationsCount2), counts[conceptUUID2].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount3), counts[conceptUUID3].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedPrevAnnotationsCount3), counts[conceptUUID3].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount4), counts[conceptUUID4].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedPrevAnnotationsCount4), counts[conceptUUID4].PrevWeekAnnotationsCount)
 }
 
 func (suite *AnnotationsCounterTestSuite) TestCountWithMissingConcepts() {
@@ -111,8 +126,8 @@ func (suite *AnnotationsCounterTestSuite) TestCountWithMissingConcepts() {
 	counts, err := ac.Count(uuids)
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), counts, 2)
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1])
-	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2])
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2].AnnotationsCount)
 }
 
 func getNeoTestURL(t *testing.T) string {
@@ -150,9 +165,19 @@ func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(concep
 		if i == 0 {
 			subCount += annotationCount % equivalentConcepts
 		}
+
+		now := time.Now().Unix()
 		for j := 0; j < subCount; j++ {
-			_, err = conn.ExecNeo("MATCH (n:Concept{uuid: {uuid}}) CREATE (n)<-[:REL]-(:Content)",
-				map[string]interface{}{"uuid": equivalentConceptUUID})
+			isRecent := j%3 == 0
+
+			var pubDate int64
+			if isRecent {
+				pubDate = now
+			} else {
+				pubDate = now - 7*24*3600 - 24*3600
+			}
+			_, err = conn.ExecNeo("MATCH (n:Concept{uuid: {uuid}}) CREATE (n)<-[:REL]-(c:Content{publishedDateEpoch: {pubDate}})",
+				map[string]interface{}{"uuid": equivalentConceptUUID, "pubDate": pubDate})
 			require.NoError(suite.T(), err)
 		}
 
