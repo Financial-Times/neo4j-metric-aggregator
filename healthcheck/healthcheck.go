@@ -1,4 +1,4 @@
-package health
+package healthcheck
 
 import (
 	"net/http"
@@ -34,10 +34,10 @@ func (service *HealthService) HealthCheckHandleFunc() func(w http.ResponseWriter
 
 func (service *HealthService) neo4jCheck() fthealth.Check {
 	return fthealth.Check{
-		ID:               "check-neo4j-health",
+		ID:               "check-neo4j-healthCheck",
 		BusinessImpact:   "No immediate business impact. Concept search may provide reduced quality results.",
 		Name:             "Check Neo4J Health",
-		PanicGuide:       "https://dewey.ft.com/neo4j-metric-aggregator.html",
+		PanicGuide:       "https://runbooks.in.ft.com/neo4j-metric-aggregator",
 		Severity:         1,
 		TechnicalSummary: "App cannot compute concept metrics from Neo4j",
 		Checker:          service.neo4jChecker,

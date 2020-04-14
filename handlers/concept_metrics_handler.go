@@ -43,7 +43,12 @@ func (h *ConceptsMetricsHandler) GetMetrics(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	json.NewEncoder(w).Encode(&concepts)
+	if err = json.NewEncoder(w).Encode(&concepts); err != nil {
+		writeJSONError(w, err, http.StatusInternalServerError)
+		writeRequestLog(r, tid, http.StatusInternalServerError)
+		return
+	}
+
 	writeRequestLog(r, tid, http.StatusOK)
 }
 
@@ -70,7 +75,10 @@ func writeJSONError(w http.ResponseWriter, err error, status int) {
 		return
 	}
 
-	w.Write(j)
+	if _, err := w.Write(j); err != nil {
+		log.WithError(err).Error("Failed to write json data to response")
+		return
+	}
 }
 
 func writeRequestLog(req *http.Request, transactionID string, status int) {
