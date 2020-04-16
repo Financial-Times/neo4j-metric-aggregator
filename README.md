@@ -8,13 +8,9 @@ A microservice to compute metrics on neo4j knowledge base.
 
 ## Installation      
 
-Download the source code, dependencies and test dependencies:
-
-        curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-        go get -u github.com/Financial-Times/neo4j-metric-aggregator
+        go get -u github.com/Financial-Times/public-lists-api
         cd $GOPATH/src/github.com/Financial-Times/neo4j-metric-aggregator
-        dep ensure
-        go build .
+        go build -mod=readonly .
 
 ## Running locally
 
@@ -34,10 +30,9 @@ Note: The version of neo4j should be the same as the one used by CircleCI
 
 2. Run the tests and install the binary:
 
-    * Fetch all dependencies: `dep ensure`
     * Run tests
-        * Unit tests only: `go test -race ./...`
-        * Unit and integration tests: `go test -race -tags=integration ./...`
+        * Unit tests only: `go test -mod=readonly -cover -race  -v ./...`
+        * Unit and integration tests: `go test -mod=readonly -race -tags=integration ./...`
     * Install the binary: `go install`
 
 3. Run the binary (using the `help` flag to see the available optional arguments):

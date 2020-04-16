@@ -1,6 +1,6 @@
 // +build integration
 
-package health
+package healthcheck
 
 import (
 	"encoding/json"

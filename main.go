@@ -4,14 +4,15 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
-	"github.com/Financial-Times/neo4j-metric-aggregator/handlers"
-	"github.com/Financial-Times/neo4j-metric-aggregator/health"
-	status "github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/husobee/vestigo"
 	"github.com/jawher/mow.cli"
 	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
+	"github.com/Financial-Times/neo4j-metric-aggregator/handlers"
+	"github.com/Financial-Times/neo4j-metric-aggregator/healthcheck"
+	status "github.com/Financial-Times/service-status-go/httphandlers"
 )
 
 const (
@@ -81,15 +82,19 @@ func main() {
 		aggregator := concept.NewMetricsAggregator(driverPool)
 		h := handlers.NewConceptsMetricsHandler(aggregator, *maxRequestBatchSize)
 
-		healthSvc := health.NewHealthService(*appSystemCode, *appName, appDescription, driverPool)
+		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, driverPool)
 
 		serveEndpoints(*port, h, healthSvc)
 	}
 
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		log.Errorf("App could not start, error=[%s]\n", err)
+		return
+	}
+
 }
 
-func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healthSvc *health.HealthService) {
+func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healthSvc *healthcheck.HealthService) {
 	r := vestigo.NewRouter()
 
 	r.Get("/concepts/metrics", handler.GetMetrics)
