@@ -1,0 +1,3 @@
+service:
+  name: neo4j-metric-aggregator
+eksCluster: true
