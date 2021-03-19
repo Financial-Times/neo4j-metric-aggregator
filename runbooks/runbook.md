@@ -18,22 +18,6 @@ Bronze
 
 Production
 
-## Delivered By
-
-content
-
-## Supported By
-
-content
-
-## Known About By
-
-- elitsa.pavlova
-- kalin.arsov
-- miroslav.gatsanoga
-- ivan.nikolov
-- marina.chompalova
-
 ## Host Platform
 
 AWS
@@ -50,9 +34,9 @@ No
 
 No
 
-## Dependencies
+## Can Download Personal Data
 
-- upp-neo4j-cluster
+No
 
 ## Failover Architecture Type
 
@@ -69,7 +53,7 @@ FullyAutomated
 ## Failover Details
 
 The service is deployed in both Delivery clusters. The failover guide for the cluster is located here:
-https://github.com/Financial-Times/upp-docs/tree/master/failover-guides/delivery-cluster
+<https://github.com/Financial-Times/upp-docs/tree/master/failover-guides/delivery-cluster>
 
 ## Data Recovery Process Type
 
@@ -103,12 +87,12 @@ There is no key rotation procedure for this system.
 
 Service in UPP K8S delivery clusters:
 
-- Delivery-Prod-EU health: https://upp-prod-delivery-eu.upp.ft.com/__health/__pods-health?service-name=neo4j-metric-aggregator
-- Delivery-Prod-US health: https://upp-prod-delivery-us.upp.ft.com/__health/__pods-health?service-name=neo4j-metric-aggregator
+*   Delivery-Prod-EU health: <https://upp-prod-delivery-eu.upp.ft.com/__health/__pods-health?service-name=neo4j-metric-aggregator>
+*   Delivery-Prod-US health: <https://upp-prod-delivery-us.upp.ft.com/__health/__pods-health?service-name=neo4j-metric-aggregator>
 
 ## First Line Troubleshooting
 
-https://github.com/Financial-Times/upp-docs/tree/master/guides/ops/first-line-troubleshooting
+<https://github.com/Financial-Times/upp-docs/tree/master/guides/ops/first-line-troubleshooting>
 
 ## Second Line Troubleshooting
 
