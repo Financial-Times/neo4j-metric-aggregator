@@ -2,9 +2,9 @@ package concept
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -12,7 +12,6 @@ import (
 )
 
 func TestGetConceptMetrics(t *testing.T) {
-
 	conceptUuids := []string{
 		"601a5957-74ab-4eab-8a43-4596355c9420",
 		"082a9fcc-5a88-48c5-bd60-64ba154204df",
@@ -53,7 +52,6 @@ func TestGetConceptMetrics(t *testing.T) {
 }
 
 func TestGetConceptMetricsWithMissingResults(t *testing.T) {
-
 	conceptUuids := []string{
 		"601a5957-74ab-4eab-8a43-4596355c9420",
 		"082a9fcc-5a88-48c5-bd60-64ba154204df",

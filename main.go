@@ -2,13 +2,14 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/husobee/vestigo"
 	cli "github.com/jawher/mow.cli"
-	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
 
+	cmneo4j "github.com/Financial-Times/cm-neo4j-driver"
 	logger "github.com/Financial-Times/go-logger/v2"
 	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
 	"github.com/Financial-Times/neo4j-metric-aggregator/handlers"
@@ -52,13 +53,6 @@ func main() {
 		EnvVar: "NEO4J_ENDPOINT",
 	})
 
-	neo4jMaxConnections := app.Int(cli.IntOpt{
-		Name:   "neo4j-max-connections",
-		Value:  10,
-		Desc:   "The maximum number of parallel connections to Neo4J",
-		EnvVar: "NEO4J_MAX_CONNECTIONS",
-	})
-
 	maxRequestBatchSize := app.Int(cli.IntOpt{
 		Name:   "maxRequestBatchSize",
 		Value:  1000,
@@ -75,18 +69,20 @@ func main() {
 		"maxRequestBatchSize": *maxRequestBatchSize,
 	}).Infof("[Startup] %v is starting", *appSystemCode)
 
+	dbLog := logger.NewUPPLogger(fmt.Sprintf("%s %s", *appName, "cmneo4j-driver"), "warning")
+
 	app.Action = func() {
-		driverPool, err := bolt.NewDriverPool(*neo4jEndpoint, *neo4jMaxConnections)
+		neoDriver, err := cmneo4j.NewDefaultDriver(*neo4jEndpoint, dbLog)
 		if err != nil {
 			log.WithField("neo4jURL", *neo4jEndpoint).
 				WithError(err).
-				Fatal("Unable to create a connection pool to neo4j")
+				Fatal("Could not initiate cmneo4j driver")
 		}
 
-		aggregator := concept.NewMetricsAggregator(driverPool, log)
+		aggregator := concept.NewMetricsAggregator(neoDriver, log)
 		h := handlers.NewConceptsMetricsHandler(aggregator, *maxRequestBatchSize, log)
 
-		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, driverPool, log)
+		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, neoDriver)
 
 		if err = serveEndpoints(*port, h, healthSvc); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Unable to start: %v", err)

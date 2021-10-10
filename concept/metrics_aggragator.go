@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
-
+	cmneo4j "github.com/Financial-Times/cm-neo4j-driver"
 	log "github.com/Financial-Times/go-logger/v2"
 	tidUtils "github.com/Financial-Times/transactionid-utils-go"
 )
@@ -14,8 +13,8 @@ type MetricsAggregator interface {
 	GetConceptMetrics(ctx context.Context, conceptUUIDs []string) ([]Concept, error)
 }
 
-func NewMetricsAggregator(driverPool bolt.DriverPool, log *log.UPPLogger) MetricsAggregator {
-	ac := NewAnnotationsCounter(driverPool)
+func NewMetricsAggregator(driver *cmneo4j.Driver, log *log.UPPLogger) MetricsAggregator {
+	ac := NewAnnotationsCounter(driver)
 
 	return &conceptMetricsAggregator{
 		annotationsCounter: ac,
