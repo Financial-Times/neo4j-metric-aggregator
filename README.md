@@ -14,27 +14,22 @@ A microservice to compute metrics on neo4j knowledge base.
 
 ## Running locally
 
-1. Run Neo4J
+1. Run the unit tests and install the binary:
 
-	For running integration tests:
-
-```
-	docker run \
-		--publish=7474:7474 --publish=7687:7687 \
-		-e NEO4J_ACCEPT_LICENSE_AGREEMENT="yes" \
-		-e NEO4J_AUTH="none" \
-		neo4j:3.2.7-enterprise
-```
-Note: The version of neo4j should be the same as the one used by CircleCI 
-
-
-2. Run the tests and install the binary:
-
-    * Run tests
+    * Run the unit tests
         * Unit tests only: `go test -mod=readonly -cover -race  -v ./...`
-        * Unit and integration tests: `go test -mod=readonly -race -tags=integration ./...`
     * Install the binary: `go install`
 
+2. Run the integration tests
+
+   In order to execute the integration tests you must provide GITHUB_USERNAME and GITHUB_TOKEN values, because the service is depending on internal repositories.
+    ```
+    GITHUB_USERNAME="<user-name>" GITHUB_TOKEN="<personal-access-token>" \
+    docker-compose -f docker-compose-tests.yml up -d --build && \
+    docker logs -f test-runner && \
+    docker-compose -f docker-compose-tests.yml down
+    ```
+   
 3. Run the binary (using the `help` flag to see the available optional arguments):
 
         $GOPATH/bin/neo4j-metric-aggregator [--help]
