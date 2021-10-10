@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"os"
 
@@ -87,7 +88,7 @@ func main() {
 
 		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, driverPool, log)
 
-		if err = serveEndpoints(*port, h, healthSvc); err != nil && err != http.ErrServerClosed {
+		if err = serveEndpoints(*port, h, healthSvc); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Unable to start: %v", err)
 		}
 	}

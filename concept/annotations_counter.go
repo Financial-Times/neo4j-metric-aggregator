@@ -37,14 +37,14 @@ type neoAnnotationsCounter struct {
 func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Metrics, error) {
 	conn, err := c.driverPool.OpenPool()
 	if err != nil {
-		return nil, fmt.Errorf("error in creating a connection to Neo4j: %v", err.Error())
+		return nil, fmt.Errorf("error in creating a connection to Neo4j: %w", err)
 	}
 	defer conn.Close()
 
 	queries, parameterSets := buildAnnotationsCountPipelineComponents(conceptUUIDs)
 	rows, err := conn.QueryPipeline(queries, parameterSets...)
 	if err != nil {
-		return nil, fmt.Errorf("error in executing query pipeline in Neo4j: %v", err.Error())
+		return nil, fmt.Errorf("error in executing query pipeline in Neo4j: %w", err)
 	}
 	retval := make(map[string]Metrics)
 
@@ -54,7 +54,7 @@ func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Metrics
 	for rows != nil {
 		row, _, nextPipelineRows, err = rows.NextPipeline()
 		if err != nil {
-			return nil, fmt.Errorf("error in parsing query reults: %v", err.Error())
+			return nil, fmt.Errorf("error in parsing query reults: %w", err)
 		}
 		if row == nil {
 			rows = nextPipelineRows
@@ -62,8 +62,11 @@ func (c *neoAnnotationsCounter) Count(conceptUUIDs []string) (map[string]Metrics
 		}
 		conceptUUID, ok := row[0].(string)
 		if ok {
-			prevWeekAnnotationsCount := row[1].(int64)
-			totalCount := row[2].(int64)
+			prevWeekAnnotationsCount, okWeekCount := row[1].(int64)
+			totalCount, okTotalCount := row[2].(int64)
+			if !okWeekCount || !okTotalCount {
+				return nil, fmt.Errorf("unexpected count type: prevWeekAnnotationsCount is %T, totalCount is %T", prevWeekAnnotationsCount, totalCount)
+			}
 			retval[conceptUUID] = Metrics{PrevWeekAnnotationsCount: prevWeekAnnotationsCount, AnnotationsCount: totalCount}
 		}
 	}

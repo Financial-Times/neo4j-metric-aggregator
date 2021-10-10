@@ -38,7 +38,7 @@ func (a *conceptMetricsAggregator) GetConceptMetrics(ctx context.Context, concep
 
 	if err != nil {
 		logRead.WithError(err).Error("error in getting annotations count for batch")
-		return nil, fmt.Errorf("error in getting annotations count: %v", err.Error())
+		return nil, fmt.Errorf("error in getting annotations count: %w", err)
 	}
 
 	concepts := []Concept{}

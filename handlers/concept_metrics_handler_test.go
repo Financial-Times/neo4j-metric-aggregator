@@ -76,6 +76,9 @@ func TestHappyGetMetrics(t *testing.T) {
 
 	h.GetMetrics(w, req)
 	resp := w.Result()
+
+	defer resp.Body.Close()
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	actualJSONBody, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)
@@ -94,6 +97,9 @@ func TestGetMetricsMissingUUIDsQueryParam(t *testing.T) {
 
 	h.GetMetrics(w, req)
 	resp := w.Result()
+
+	defer resp.Body.Close()
+
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	actualJSONBody, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)
@@ -112,6 +118,9 @@ func TestGetMetricsEmptyUUIDsQueryParam(t *testing.T) {
 
 	h.GetMetrics(w, req)
 	resp := w.Result()
+
+	defer resp.Body.Close()
+
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	actualJSONBody, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)
@@ -130,6 +139,9 @@ func TestUUIDsBatchLimit(t *testing.T) {
 
 	h.GetMetrics(w, req)
 	resp := w.Result()
+
+	defer resp.Body.Close()
+
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	actualJSONBody, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)
@@ -150,6 +162,9 @@ func TestMetricsAggregatorError(t *testing.T) {
 
 	h.GetMetrics(w, req)
 	resp := w.Result()
+
+	defer resp.Body.Close()
+
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	actualJSONBody, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)

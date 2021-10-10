@@ -20,9 +20,9 @@ func TestGetConceptMetrics(t *testing.T) {
 	}
 
 	countResult := map[string]Metrics{
-		"601a5957-74ab-4eab-8a43-4596355c9420": Metrics{3, 5},
-		"082a9fcc-5a88-48c5-bd60-64ba154204df": Metrics{123, 1000},
-		"f7885509-c029-496b-87dd-aecf1ca138d7": Metrics{4, 1024},
+		"601a5957-74ab-4eab-8a43-4596355c9420": {AnnotationsCount: 3, PrevWeekAnnotationsCount: 5},
+		"082a9fcc-5a88-48c5-bd60-64ba154204df": {AnnotationsCount: 123, PrevWeekAnnotationsCount: 1000},
+		"f7885509-c029-496b-87dd-aecf1ca138d7": {AnnotationsCount: 4, PrevWeekAnnotationsCount: 1024},
 	}
 
 	ma := new(conceptMetricsAggregator)
@@ -61,8 +61,8 @@ func TestGetConceptMetricsWithMissingResults(t *testing.T) {
 	}
 
 	countResult := map[string]Metrics{
-		"601a5957-74ab-4eab-8a43-4596355c9420": Metrics{3, 113},
-		"f7885509-c029-496b-87dd-aecf1ca138d7": Metrics{4, 1024},
+		"601a5957-74ab-4eab-8a43-4596355c9420": {AnnotationsCount: 3, PrevWeekAnnotationsCount: 113},
+		"f7885509-c029-496b-87dd-aecf1ca138d7": {AnnotationsCount: 4, PrevWeekAnnotationsCount: 1024},
 	}
 
 	ma := new(conceptMetricsAggregator)
