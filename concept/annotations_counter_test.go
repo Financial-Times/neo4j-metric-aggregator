@@ -154,7 +154,7 @@ func getNeoTestURL(t *testing.T) string {
 func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(conceptPrefUUID string, equivalentConcepts, annotationCount int) {
 	//creation of canonical concept node
 	canonicalQ := &cmneo4j.Query{
-		Cypher: "CREATE (n:Concept{prefUUID: {prefUUID}})",
+		Cypher: "CREATE (n:Concept{prefUUID: $prefUUID})",
 		Params: map[string]interface{}{"prefUUID": conceptPrefUUID},
 	}
 	err := suite.driver.Write(canonicalQ)
@@ -165,7 +165,7 @@ func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(concep
 		equivalentConceptUUID := uuid.New().String()
 
 		sourceQ := &cmneo4j.Query{
-			Cypher: "MATCH (n:Concept{prefUUID: {prefUUID}}) CREATE (n)<-[:EQUIVALENT_TO]-(x:Concept{uuid:{uuid}})",
+			Cypher: "MATCH (n:Concept{prefUUID: $prefUUID}) CREATE (n)<-[:EQUIVALENT_TO]-(x:Concept{uuid:$uuid})",
 			Params: map[string]interface{}{"prefUUID": conceptPrefUUID, "uuid": equivalentConceptUUID},
 		}
 		err = suite.driver.Write(sourceQ)
@@ -189,7 +189,7 @@ func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(concep
 			}
 
 			contentQ := &cmneo4j.Query{
-				Cypher: "MATCH (n:Concept{uuid: {uuid}}) CREATE (n)<-[:REL]-(c:Content{publishedDateEpoch: {pubDate}})",
+				Cypher: "MATCH (n:Concept{uuid: $uuid}) CREATE (n)<-[:REL]-(c:Content{publishedDateEpoch: $pubDate})",
 				Params: map[string]interface{}{"uuid": equivalentConceptUUID, "pubDate": pubDate},
 			}
 			err = suite.driver.Write(contentQ)

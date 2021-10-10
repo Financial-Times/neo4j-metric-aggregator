@@ -9,7 +9,7 @@ import (
 )
 
 const countAnnotationsQuery = `
-	MATCH (canonicalConcept :Concept{prefUUID:{uuid}})<-[:EQUIVALENT_TO]-(x:Concept)
+	MATCH (canonicalConcept :Concept{prefUUID:$uuid})<-[:EQUIVALENT_TO]-(x:Concept)
 	OPTIONAL MATCH (x)-[]-(content:Content)
 	WITH canonicalConcept, count(content) AS totalCount, COLLECT(DISTINCT(content)) as contentList
     UNWIND
@@ -19,7 +19,7 @@ const countAnnotationsQuery = `
 		  ELSE contentList
 		END AS cl
 	MATCH (cl)
-	WHERE cl.publishedDateEpoch > {since} OR cl IS null 
+	WHERE cl.publishedDateEpoch > $since OR cl IS null 
 	RETURN canonicalConcept.prefUUID AS uuid, count(cl) AS recentCount, totalCount
 `
 
