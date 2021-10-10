@@ -7,6 +7,8 @@ import (
 	"github.com/johnnadratowski/golang-neo4j-bolt-driver/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	logger "github.com/Financial-Times/go-logger/v2"
 )
 
 func TestGetConceptMetrics(t *testing.T) {
@@ -27,6 +29,7 @@ func TestGetConceptMetrics(t *testing.T) {
 	ac := new(MockAnnotationCounter)
 	ac.On("Count", conceptUuids).Return(countResult, nil)
 	ma.annotationsCounter = ac
+	ma.log = logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
 
 	expectedConcepts := []Concept{
 		{
@@ -66,6 +69,7 @@ func TestGetConceptMetricsWithMissingResults(t *testing.T) {
 	ac := new(MockAnnotationCounter)
 	ac.On("Count", conceptUuids).Return(countResult, nil)
 	ma.annotationsCounter = ac
+	ma.log = logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
 
 	expectedConcepts := []Concept{
 		{
@@ -96,6 +100,7 @@ func TestGetConceptMetricsWithNoResults(t *testing.T) {
 	ac := new(MockAnnotationCounter)
 	ac.On("Count", conceptUuids).Return(map[string]Metrics{}, nil)
 	ma.annotationsCounter = ac
+	ma.log = logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
 
 	expectedConcepts := []Concept{}
 
@@ -117,6 +122,7 @@ func TestGetConceptMetricsError(t *testing.T) {
 	ac := new(MockAnnotationCounter)
 	ac.On("Count", conceptUuids).Return(map[string]Metrics{}, errors.New("computer says no"))
 	ma.annotationsCounter = ac
+	ma.log = logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
 
 	_, err := ma.GetConceptMetrics(context.Background(), conceptUuids)
 	assert.Error(t, err)

@@ -9,18 +9,23 @@ import (
 	"net/http"
 	"strings"
 
+	log "github.com/Financial-Times/go-logger/v2"
 	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
 	tidUtils "github.com/Financial-Times/transactionid-utils-go"
-	log "github.com/sirupsen/logrus"
 )
 
 type ConceptsMetricsHandler struct {
 	metricsAggregator concept.MetricsAggregator
 	maxUUIDBatchSize  int
+	log               *log.UPPLogger
 }
 
-func NewConceptsMetricsHandler(metricsAggregator concept.MetricsAggregator, maxUUIDBatchSize int) *ConceptsMetricsHandler {
-	return &ConceptsMetricsHandler{metricsAggregator, maxUUIDBatchSize}
+func NewConceptsMetricsHandler(metricsAggregator concept.MetricsAggregator, maxUUIDBatchSize int, log *log.UPPLogger) *ConceptsMetricsHandler {
+	return &ConceptsMetricsHandler{
+		metricsAggregator: metricsAggregator,
+		maxUUIDBatchSize:  maxUUIDBatchSize,
+		log:               log,
+	}
 }
 
 func (h *ConceptsMetricsHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
@@ -31,25 +36,25 @@ func (h *ConceptsMetricsHandler) GetMetrics(w http.ResponseWriter, r *http.Reque
 
 	uuids, err := h.extractConceptUUIDs(r)
 	if err != nil {
-		writeJSONError(w, err, http.StatusBadRequest)
-		writeRequestLog(r, tid, http.StatusBadRequest)
+		h.writeJSONError(w, err, http.StatusBadRequest)
+		h.writeRequestLog(r, tid, http.StatusBadRequest)
 		return
 	}
 
 	concepts, err := h.metricsAggregator.GetConceptMetrics(ctx, uuids)
 	if err != nil {
-		writeJSONError(w, err, http.StatusInternalServerError)
-		writeRequestLog(r, tid, http.StatusInternalServerError)
+		h.writeJSONError(w, err, http.StatusInternalServerError)
+		h.writeRequestLog(r, tid, http.StatusInternalServerError)
 		return
 	}
 
 	if err = json.NewEncoder(w).Encode(&concepts); err != nil {
-		writeJSONError(w, err, http.StatusInternalServerError)
-		writeRequestLog(r, tid, http.StatusInternalServerError)
+		h.writeJSONError(w, err, http.StatusInternalServerError)
+		h.writeRequestLog(r, tid, http.StatusInternalServerError)
 		return
 	}
 
-	writeRequestLog(r, tid, http.StatusOK)
+	h.writeRequestLog(r, tid, http.StatusOK)
 }
 
 func (h *ConceptsMetricsHandler) extractConceptUUIDs(r *http.Request) ([]string, error) {
@@ -64,24 +69,24 @@ func (h *ConceptsMetricsHandler) extractConceptUUIDs(r *http.Request) ([]string,
 	return uuids, nil
 }
 
-func writeJSONError(w http.ResponseWriter, err error, status int) {
+func (h *ConceptsMetricsHandler) writeJSONError(w http.ResponseWriter, err error, status int) {
 	w.WriteHeader(status)
 
 	message := make(map[string]interface{})
 	message["message"] = err.Error()
 	j, err := json.Marshal(&message)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse provided message to json, this is a bug.")
+		h.log.WithError(err).Error("Failed to parse provided message to json, this is a bug.")
 		return
 	}
 
 	if _, err := w.Write(j); err != nil {
-		log.WithError(err).Error("Failed to write json data to response")
+		h.log.WithError(err).Error("Failed to write json data to response")
 		return
 	}
 }
 
-func writeRequestLog(req *http.Request, transactionID string, status int) {
+func (h *ConceptsMetricsHandler) writeRequestLog(req *http.Request, transactionID string, status int) {
 	username := "-"
 	if req.URL.User != nil {
 		if name := req.URL.User.Username(); name != "" {
@@ -105,7 +110,7 @@ func writeRequestLog(req *http.Request, transactionID string, status int) {
 		uri = req.Host
 	}
 
-	log.WithFields(log.Fields{
+	h.log.WithFields(map[string]interface{}{
 		"host":           host,
 		"username":       username,
 		"method":         req.Method,

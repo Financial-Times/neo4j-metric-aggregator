@@ -9,18 +9,22 @@ import (
 	"os"
 	"testing"
 
-	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
-	status "github.com/Financial-Times/service-status-go/httphandlers"
 	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
+	logger "github.com/Financial-Times/go-logger/v2"
+	status "github.com/Financial-Times/service-status-go/httphandlers"
 )
 
 func TestHappyHealthCheck(t *testing.T) {
 	neoTestURL := getNeoTestURL(t)
 	dp, err := bolt.NewDriverPool(neoTestURL, 10)
 	require.NoError(t, err)
-	h := NewHealthService("", "", "", dp)
+
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
+	h := NewHealthService("", "", "", dp, log)
 
 	req := httptest.NewRequest("GET", "/__health", nil)
 	w := httptest.NewRecorder()
@@ -45,7 +49,9 @@ func TestHappyHealthCheck(t *testing.T) {
 func TestUnhappyHealthCheck(t *testing.T) {
 	dp, err := bolt.NewDriverPool("bolt://localhost:80", 10)
 	require.NoError(t, err)
-	h := NewHealthService("", "", "", dp)
+
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
+	h := NewHealthService("", "", "", dp, log)
 
 	req := httptest.NewRequest("GET", "/__health", nil)
 	w := httptest.NewRecorder()
@@ -72,7 +78,9 @@ func TestHappyGTG(t *testing.T) {
 	dp, err := bolt.NewDriverPool(neoTestURL, 10)
 	require.NoError(t, err)
 
-	h := NewHealthService("", "", "", dp)
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
+	h := NewHealthService("", "", "", dp, log)
+
 	req := httptest.NewRequest("GET", "/__gtg", nil)
 	w := httptest.NewRecorder()
 	status.NewGoodToGoHandler(h.GTG)(w, req)
@@ -85,7 +93,9 @@ func TestUnhappyGTG(t *testing.T) {
 	dp, err := bolt.NewDriverPool("bolt://localhost:80", 10)
 	require.NoError(t, err)
 
-	h := NewHealthService("", "", "", dp)
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
+	h := NewHealthService("", "", "", dp, log)
+
 	req := httptest.NewRequest("GET", "/__gtg", nil)
 	w := httptest.NewRecorder()
 	status.NewGoodToGoHandler(h.GTG)(w, req)

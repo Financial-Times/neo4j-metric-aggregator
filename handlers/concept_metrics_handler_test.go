@@ -9,9 +9,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
 	"github.com/stretchr/testify/mock"
+
+	logger "github.com/Financial-Times/go-logger/v2"
+	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
 )
 
 var testConceptsUUIDs = []string{
@@ -67,7 +68,9 @@ func TestHappyGetMetrics(t *testing.T) {
 	ma := new(MockMetricsAggregator)
 	ma.On("GetConceptMetrics", mock.AnythingOfType("*context.valueCtx"), testConceptsUUIDs).Return(testConcepts, nil)
 
-	h := NewConceptsMetricsHandler(ma, 10)
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
+
+	h := NewConceptsMetricsHandler(ma, 10, log)
 	req := httptest.NewRequest("GET", "http://localhost:8080/concepts/metrics"+testQueryParam, nil)
 	w := httptest.NewRecorder()
 
@@ -83,8 +86,9 @@ func TestHappyGetMetrics(t *testing.T) {
 
 func TestGetMetricsMissingUUIDsQueryParam(t *testing.T) {
 	ma := new(MockMetricsAggregator)
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
 
-	h := NewConceptsMetricsHandler(ma, 10)
+	h := NewConceptsMetricsHandler(ma, 10, log)
 	req := httptest.NewRequest("GET", "http://localhost:8080/concepts/metrics", nil)
 	w := httptest.NewRecorder()
 
@@ -100,8 +104,9 @@ func TestGetMetricsMissingUUIDsQueryParam(t *testing.T) {
 
 func TestGetMetricsEmptyUUIDsQueryParam(t *testing.T) {
 	ma := new(MockMetricsAggregator)
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
 
-	h := NewConceptsMetricsHandler(ma, 10)
+	h := NewConceptsMetricsHandler(ma, 10, log)
 	req := httptest.NewRequest("GET", "http://localhost:8080/concepts/metrics?uuids=", nil)
 	w := httptest.NewRecorder()
 
@@ -117,8 +122,9 @@ func TestGetMetricsEmptyUUIDsQueryParam(t *testing.T) {
 
 func TestUUIDsBatchLimit(t *testing.T) {
 	ma := new(MockMetricsAggregator)
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
 
-	h := NewConceptsMetricsHandler(ma, 2)
+	h := NewConceptsMetricsHandler(ma, 2, log)
 	req := httptest.NewRequest("GET", "http://localhost:8080/concepts/metrics"+testQueryParam, nil)
 	w := httptest.NewRecorder()
 
@@ -136,7 +142,9 @@ func TestMetricsAggregatorError(t *testing.T) {
 	ma := new(MockMetricsAggregator)
 	ma.On("GetConceptMetrics", mock.AnythingOfType("*context.valueCtx"), testConceptsUUIDs).Return([]concept.Concept{}, errors.New("computer says no"))
 
-	h := NewConceptsMetricsHandler(ma, 10)
+	log := logger.NewUPPInfoLogger("test-neo4j-metric-aggregator")
+
+	h := NewConceptsMetricsHandler(ma, 10, log)
 	req := httptest.NewRequest("GET", "http://localhost:8080/concepts/metrics"+testQueryParam, nil)
 	w := httptest.NewRecorder()
 

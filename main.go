@@ -5,10 +5,10 @@ import (
 	"os"
 
 	"github.com/husobee/vestigo"
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
-	log "github.com/sirupsen/logrus"
 
+	logger "github.com/Financial-Times/go-logger/v2"
 	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
 	"github.com/Financial-Times/neo4j-metric-aggregator/handlers"
 	"github.com/Financial-Times/neo4j-metric-aggregator/healthcheck"
@@ -65,13 +65,16 @@ func main() {
 		EnvVar: "MAX_REQUEST_BATCH_SIZE",
 	})
 
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.InfoLevel)
-	log.Infof("[Startup] %v is starting", *appSystemCode)
+	log := logger.NewUPPInfoLogger(*appName)
+	log.WithFields(map[string]interface{}{
+		"appName":             *appName,
+		"appSystemCode":       *appSystemCode,
+		"port":                *port,
+		"neo4jEndpoint":       *neo4jEndpoint,
+		"maxRequestBatchSize": *maxRequestBatchSize,
+	}).Infof("[Startup] %v is starting", *appSystemCode)
 
 	app.Action = func() {
-		log.Infof("System code: %s, App Name: %s, Port: %s", *appSystemCode, *appName, *port)
-
 		driverPool, err := bolt.NewDriverPool(*neo4jEndpoint, *neo4jMaxConnections)
 		if err != nil {
 			log.WithField("neo4jURL", *neo4jEndpoint).
@@ -79,12 +82,14 @@ func main() {
 				Fatal("Unable to create a connection pool to neo4j")
 		}
 
-		aggregator := concept.NewMetricsAggregator(driverPool)
-		h := handlers.NewConceptsMetricsHandler(aggregator, *maxRequestBatchSize)
+		aggregator := concept.NewMetricsAggregator(driverPool, log)
+		h := handlers.NewConceptsMetricsHandler(aggregator, *maxRequestBatchSize, log)
 
-		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, driverPool)
+		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, driverPool, log)
 
-		serveEndpoints(*port, h, healthSvc)
+		if err = serveEndpoints(*port, h, healthSvc); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Unable to start: %v", err)
+		}
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -94,7 +99,7 @@ func main() {
 
 }
 
-func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healthSvc *healthcheck.HealthService) {
+func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healthSvc *healthcheck.HealthService) error {
 	r := vestigo.NewRouter()
 
 	r.Get("/concepts/metrics", handler.GetMetrics)
@@ -105,7 +110,5 @@ func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healt
 
 	http.Handle("/", r)
 
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("Unable to start: %v", err)
-	}
+	return http.ListenAndServe(":"+port, nil)
 }
