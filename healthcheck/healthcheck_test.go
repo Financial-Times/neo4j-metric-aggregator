@@ -9,18 +9,22 @@ import (
 	"os"
 	"testing"
 
-	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
-	status "github.com/Financial-Times/service-status-go/httphandlers"
-	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	cmneo4j "github.com/Financial-Times/cm-neo4j-driver"
+	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
+	logger "github.com/Financial-Times/go-logger/v2"
+	status "github.com/Financial-Times/service-status-go/httphandlers"
 )
 
 func TestHappyHealthCheck(t *testing.T) {
+	log := logger.NewUPPLogger("test-neo4j-metric-aggregator", "warning")
 	neoTestURL := getNeoTestURL(t)
-	dp, err := bolt.NewDriverPool(neoTestURL, 10)
+	d, err := cmneo4j.NewDefaultDriver(neoTestURL, log)
 	require.NoError(t, err)
-	h := NewHealthService("", "", "", dp)
+
+	h := NewHealthService("", "", "", d)
 
 	req := httptest.NewRequest("GET", "/__health", nil)
 	w := httptest.NewRecorder()
@@ -43,9 +47,11 @@ func TestHappyHealthCheck(t *testing.T) {
 }
 
 func TestUnhappyHealthCheck(t *testing.T) {
-	dp, err := bolt.NewDriverPool("bolt://localhost:80", 10)
+	log := logger.NewUPPLogger("test-neo4j-metric-aggregator", "warning")
+	d, err := cmneo4j.NewDefaultDriver("bolt://localhost:80", log)
 	require.NoError(t, err)
-	h := NewHealthService("", "", "", dp)
+
+	h := NewHealthService("", "", "", d)
 
 	req := httptest.NewRequest("GET", "/__health", nil)
 	w := httptest.NewRecorder()
@@ -68,11 +74,13 @@ func TestUnhappyHealthCheck(t *testing.T) {
 }
 
 func TestHappyGTG(t *testing.T) {
+	log := logger.NewUPPLogger("test-neo4j-metric-aggregator", "warning")
 	neoTestURL := getNeoTestURL(t)
-	dp, err := bolt.NewDriverPool(neoTestURL, 10)
+	d, err := cmneo4j.NewDefaultDriver(neoTestURL, log)
 	require.NoError(t, err)
 
-	h := NewHealthService("", "", "", dp)
+	h := NewHealthService("", "", "", d)
+
 	req := httptest.NewRequest("GET", "/__gtg", nil)
 	w := httptest.NewRecorder()
 	status.NewGoodToGoHandler(h.GTG)(w, req)
@@ -82,10 +90,12 @@ func TestHappyGTG(t *testing.T) {
 }
 
 func TestUnhappyGTG(t *testing.T) {
-	dp, err := bolt.NewDriverPool("bolt://localhost:80", 10)
+	log := logger.NewUPPLogger("test-neo4j-metric-aggregator", "warning")
+	d, err := cmneo4j.NewDefaultDriver("bolt://localhost:80", log)
 	require.NoError(t, err)
 
-	h := NewHealthService("", "", "", dp)
+	h := NewHealthService("", "", "", d)
+
 	req := httptest.NewRequest("GET", "/__gtg", nil)
 	w := httptest.NewRecorder()
 	status.NewGoodToGoHandler(h.GTG)(w, req)

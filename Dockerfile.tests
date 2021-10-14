@@ -1,0 +1,16 @@
+FROM golang:1
+
+ENV PROJECT="neo4j-metric-aggregator"
+
+ARG GITHUB_USERNAME
+ARG GITHUB_TOKEN
+
+COPY . /${PROJECT}/
+WORKDIR /${PROJECT}
+
+RUN echo "Fetching dependencies..." \
+&& git config --global url."https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com" \
+&& git clone https://github.com/vishnubob/wait-for-it.git \
+&& go env -w GOPRIVATE=github.com/Financial-Times
+
+ENTRYPOINT ["./wait-for-it/wait-for-it.sh", "neo4j:7474", "-t", "60", "--strict", "--"]

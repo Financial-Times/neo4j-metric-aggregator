@@ -1,14 +1,16 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/husobee/vestigo"
-	"github.com/jawher/mow.cli"
-	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
-	log "github.com/sirupsen/logrus"
+	cli "github.com/jawher/mow.cli"
 
+	cmneo4j "github.com/Financial-Times/cm-neo4j-driver"
+	logger "github.com/Financial-Times/go-logger/v2"
 	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
 	"github.com/Financial-Times/neo4j-metric-aggregator/handlers"
 	"github.com/Financial-Times/neo4j-metric-aggregator/healthcheck"
@@ -51,13 +53,6 @@ func main() {
 		EnvVar: "NEO4J_ENDPOINT",
 	})
 
-	neo4jMaxConnections := app.Int(cli.IntOpt{
-		Name:   "neo4j-max-connections",
-		Value:  10,
-		Desc:   "The maximum number of parallel connections to Neo4J",
-		EnvVar: "NEO4J_MAX_CONNECTIONS",
-	})
-
 	maxRequestBatchSize := app.Int(cli.IntOpt{
 		Name:   "maxRequestBatchSize",
 		Value:  1000,
@@ -65,26 +60,33 @@ func main() {
 		EnvVar: "MAX_REQUEST_BATCH_SIZE",
 	})
 
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.InfoLevel)
-	log.Infof("[Startup] %v is starting", *appSystemCode)
+	log := logger.NewUPPInfoLogger(*appName)
+	log.WithFields(map[string]interface{}{
+		"appName":             *appName,
+		"appSystemCode":       *appSystemCode,
+		"port":                *port,
+		"neo4jEndpoint":       *neo4jEndpoint,
+		"maxRequestBatchSize": *maxRequestBatchSize,
+	}).Infof("[Startup] %v is starting", *appSystemCode)
+
+	dbLog := logger.NewUPPLogger(fmt.Sprintf("%s %s", *appName, "cmneo4j-driver"), "warning")
 
 	app.Action = func() {
-		log.Infof("System code: %s, App Name: %s, Port: %s", *appSystemCode, *appName, *port)
-
-		driverPool, err := bolt.NewDriverPool(*neo4jEndpoint, *neo4jMaxConnections)
+		neoDriver, err := cmneo4j.NewDefaultDriver(*neo4jEndpoint, dbLog)
 		if err != nil {
 			log.WithField("neo4jURL", *neo4jEndpoint).
 				WithError(err).
-				Fatal("Unable to create a connection pool to neo4j")
+				Fatal("Could not initiate cmneo4j driver")
 		}
 
-		aggregator := concept.NewMetricsAggregator(driverPool)
-		h := handlers.NewConceptsMetricsHandler(aggregator, *maxRequestBatchSize)
+		aggregator := concept.NewMetricsAggregator(neoDriver, log)
+		h := handlers.NewConceptsMetricsHandler(aggregator, *maxRequestBatchSize, log)
 
-		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, driverPool)
+		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, neoDriver)
 
-		serveEndpoints(*port, h, healthSvc)
+		if err = serveEndpoints(*port, h, healthSvc); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Unable to start: %v", err)
+		}
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -94,7 +96,7 @@ func main() {
 
 }
 
-func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healthSvc *healthcheck.HealthService) {
+func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healthSvc *healthcheck.HealthService) error {
 	r := vestigo.NewRouter()
 
 	r.Get("/concepts/metrics", handler.GetMetrics)
@@ -105,7 +107,5 @@ func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healt
 
 	http.Handle("/", r)
 
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("Unable to start: %v", err)
-	}
+	return http.ListenAndServe(":"+port, nil)
 }
