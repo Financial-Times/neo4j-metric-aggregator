@@ -1,16 +1,22 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/husobee/vestigo"
+	"github.com/gorilla/mux"
 	cli "github.com/jawher/mow.cli"
+	metrics "github.com/rcrowley/go-metrics"
 
 	cmneo4j "github.com/Financial-Times/cm-neo4j-driver"
 	logger "github.com/Financial-Times/go-logger/v2"
+	"github.com/Financial-Times/http-handlers-go/v2/httphandlers"
 	"github.com/Financial-Times/neo4j-metric-aggregator/concept"
 	"github.com/Financial-Times/neo4j-metric-aggregator/handlers"
 	"github.com/Financial-Times/neo4j-metric-aggregator/healthcheck"
@@ -20,6 +26,11 @@ import (
 const (
 	systemCode     = "neo4j-metric-aggregator"
 	appDescription = "An app to compute metrics on Neo4j knowledge base"
+
+	httpServerReadTimeout  = 10 * time.Second
+	httpServerWriteTimeout = 15 * time.Second
+	httpServerIdleTimeout  = 20 * time.Second
+	httpHandlersTimeout    = 14 * time.Second
 )
 
 func main() {
@@ -61,17 +72,17 @@ func main() {
 	})
 
 	log := logger.NewUPPInfoLogger(*appName)
-	log.WithFields(map[string]interface{}{
-		"appName":             *appName,
-		"appSystemCode":       *appSystemCode,
-		"port":                *port,
-		"neo4jEndpoint":       *neo4jEndpoint,
-		"maxRequestBatchSize": *maxRequestBatchSize,
-	}).Infof("[Startup] %v is starting", *appSystemCode)
-
 	dbLog := logger.NewUPPLogger(fmt.Sprintf("%s %s", *appName, "cmneo4j-driver"), "warning")
 
 	app.Action = func() {
+		log.WithFields(map[string]interface{}{
+			"appName":             *appName,
+			"appSystemCode":       *appSystemCode,
+			"port":                *port,
+			"neo4jEndpoint":       *neo4jEndpoint,
+			"maxRequestBatchSize": *maxRequestBatchSize,
+		}).Infof("[Startup] %v is starting", *appSystemCode)
+
 		neoDriver, err := cmneo4j.NewDefaultDriver(*neo4jEndpoint, dbLog)
 		if err != nil {
 			log.WithField("neo4jURL", *neo4jEndpoint).
@@ -84,9 +95,13 @@ func main() {
 
 		healthSvc := healthcheck.NewHealthService(*appSystemCode, *appName, appDescription, neoDriver)
 
-		if err = serveEndpoints(*port, h, healthSvc); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Unable to start: %v", err)
-		}
+		router := registerEndpoints(h, healthSvc, log)
+
+		server := newHTTPServer(*port, router)
+		go startHTTPServer(server, log)
+
+		waitForSignal()
+		stopHTTPServer(server, log)
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -96,16 +111,59 @@ func main() {
 
 }
 
-func serveEndpoints(port string, handler *handlers.ConceptsMetricsHandler, healthSvc *healthcheck.HealthService) error {
-	r := vestigo.NewRouter()
+func registerEndpoints(handler *handlers.ConceptsMetricsHandler, healthService *healthcheck.HealthService, log *logger.UPPLogger) http.Handler {
+	serveMux := http.NewServeMux()
 
-	r.Get("/concepts/metrics", handler.GetMetrics)
+	// register supervisory endpoint that does not require logging and metrics collection
+	serveMux.HandleFunc("/__health", healthService.HealthCheckHandleFunc())
+	serveMux.HandleFunc(status.GTGPath, status.NewGoodToGoHandler(healthService.GTG))
+	serveMux.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 
-	http.HandleFunc("/__health", healthSvc.HealthCheckHandleFunc())
-	http.HandleFunc(status.GTGPath, status.NewGoodToGoHandler(healthSvc.GTG))
-	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
+	// add services router and register endpoints specific to this service only
+	servicesRouter := mux.NewRouter()
+	servicesRouter.HandleFunc("/concepts/metrics", handler.GetMetrics).Methods("GET")
 
-	http.Handle("/", r)
+	// wrap the handlers with certain middlewares providing logging of the requests,
+	// sending metrics and handler time out on certain time interval
+	var wrappedServicesRouter http.Handler = servicesRouter
+	wrappedServicesRouter = httphandlers.TransactionAwareRequestLoggingHandler(log, wrappedServicesRouter)
+	wrappedServicesRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, wrappedServicesRouter)
+	wrappedServicesRouter = http.TimeoutHandler(wrappedServicesRouter, httpHandlersTimeout, "")
 
-	return http.ListenAndServe(":"+port, nil)
+	serveMux.Handle("/", wrappedServicesRouter)
+
+	return serveMux
+}
+
+func newHTTPServer(port string, router http.Handler) *http.Server {
+	return &http.Server{
+		Addr:         ":" + port,
+		Handler:      router,
+		ReadTimeout:  httpServerReadTimeout,
+		WriteTimeout: httpServerWriteTimeout,
+		IdleTimeout:  httpServerIdleTimeout,
+	}
+}
+
+func startHTTPServer(server *http.Server, log *logger.UPPLogger) {
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("HTTP server failed to start: %v", err)
+	}
+}
+
+func stopHTTPServer(server *http.Server, log *logger.UPPLogger) {
+	log.Info("HTTP server is shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Failed to gracefully shutdown the server: %v", err)
+	}
+}
+
+func waitForSignal() {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	<-ch
 }

@@ -3,6 +3,7 @@
 package concept
 
 import (
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -52,7 +53,8 @@ func (suite *AnnotationsCounterTestSuite) TearDownTest() {
 func (suite *AnnotationsCounterTestSuite) TestCountSingleValue() {
 	conceptUUID := uuid.New().String()
 	expectedAnnotationsCount := 25
-	suite.writeTestConceptWithAnnotations(conceptUUID, 3, expectedAnnotationsCount)
+	expectedRecentAnnotationsCount := 22
+	suite.writeTestConceptWithAnnotations(conceptUUID, 3, expectedAnnotationsCount, expectedRecentAnnotationsCount)
 
 	ac := NewAnnotationsCounter(suite.driver)
 	counts, err := ac.Count([]string{conceptUUID})
@@ -60,7 +62,7 @@ func (suite *AnnotationsCounterTestSuite) TestCountSingleValue() {
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), counts, 1)
 
-	assert.Equal(suite.T(), int64(9), counts[conceptUUID].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedRecentAnnotationsCount), counts[conceptUUID].PrevWeekAnnotationsCount)
 	assert.Equal(suite.T(), int64(expectedAnnotationsCount), counts[conceptUUID].AnnotationsCount)
 }
 
@@ -69,22 +71,22 @@ func (suite *AnnotationsCounterTestSuite) TestCountMultiValue() {
 	conceptUUID1 := uuid.New().String()
 	expectedAnnotationsCount1 := 25
 	expectedPrevAnnotationsCount1 := 9
-	suite.writeTestConceptWithAnnotations(conceptUUID1, 3, expectedAnnotationsCount1)
+	suite.writeTestConceptWithAnnotations(conceptUUID1, 3, expectedAnnotationsCount1, expectedPrevAnnotationsCount1)
 
 	conceptUUID2 := uuid.New().String()
 	expectedAnnotationsCount2 := 10
 	expectedPrevAnnotationsCount2 := 4
-	suite.writeTestConceptWithAnnotations(conceptUUID2, 1, expectedAnnotationsCount2)
+	suite.writeTestConceptWithAnnotations(conceptUUID2, 1, expectedAnnotationsCount2, expectedPrevAnnotationsCount2)
 
 	conceptUUID3 := uuid.New().String()
 	expectedAnnotationsCount3 := 1234
 	expectedPrevAnnotationsCount3 := 412
-	suite.writeTestConceptWithAnnotations(conceptUUID3, 5, expectedAnnotationsCount3)
+	suite.writeTestConceptWithAnnotations(conceptUUID3, 5, expectedAnnotationsCount3, expectedPrevAnnotationsCount3)
 
 	conceptUUID4 := uuid.New().String()
 	expectedAnnotationsCount4 := 0
 	expectedPrevAnnotationsCount4 := 0
-	suite.writeTestConceptWithAnnotations(conceptUUID4, 3, expectedAnnotationsCount4)
+	suite.writeTestConceptWithAnnotations(conceptUUID4, 3, expectedAnnotationsCount4, expectedPrevAnnotationsCount4)
 
 	uuids := []string{
 		conceptUUID1,
@@ -109,12 +111,14 @@ func (suite *AnnotationsCounterTestSuite) TestCountMultiValue() {
 
 func (suite *AnnotationsCounterTestSuite) TestCountWithMissingConcepts() {
 	conceptUUID1 := uuid.New().String()
-	expectedAnnotationsCount1 := 25
-	suite.writeTestConceptWithAnnotations(conceptUUID1, 3, expectedAnnotationsCount1)
+	expectedAnnCount1 := 25
+	expectedRecentAnnCount1 := 2
+	suite.writeTestConceptWithAnnotations(conceptUUID1, 3, expectedAnnCount1, expectedRecentAnnCount1)
 
 	conceptUUID2 := uuid.New().String()
-	expectedAnnotationsCount2 := 10
-	suite.writeTestConceptWithAnnotations(conceptUUID2, 1, expectedAnnotationsCount2)
+	expectedAnnCount2 := 10
+	expectedRecentAnnCount2 := 10
+	suite.writeTestConceptWithAnnotations(conceptUUID2, 1, expectedAnnCount2, expectedRecentAnnCount2)
 
 	conceptUUID3 := uuid.New().String()
 	conceptUUID4 := uuid.New().String()
@@ -129,12 +133,37 @@ func (suite *AnnotationsCounterTestSuite) TestCountWithMissingConcepts() {
 	ac := NewAnnotationsCounter(suite.driver)
 	counts, err := ac.Count(uuids)
 	assert.NoError(suite.T(), err)
-	assert.Len(suite.T(), counts, 0)
-	// TODO: this is no longer true using the new driver as it is returning error when no results are returned
-	// There is a bug in the cypher query that should be fixed first.
-	// assert.Len(suite.T(), counts, 2)
-	// assert.Equal(suite.T(), int64(expectedAnnotationsCount1), counts[conceptUUID1].AnnotationsCount)
-	// assert.Equal(suite.T(), int64(expectedAnnotationsCount2), counts[conceptUUID2].AnnotationsCount)
+	assert.Len(suite.T(), counts, 2)
+	assert.Equal(suite.T(), int64(expectedAnnCount1), counts[conceptUUID1].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedRecentAnnCount1), counts[conceptUUID1].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnCount2), counts[conceptUUID2].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedRecentAnnCount2), counts[conceptUUID2].PrevWeekAnnotationsCount)
+}
+
+func (suite *AnnotationsCounterTestSuite) TestCountWithNoRecentAnnotations() {
+	conceptUUID1 := uuid.New().String()
+	expectedAnnCount1 := 125
+	expectedRecentAnnCount1 := 0
+	suite.writeTestConceptWithAnnotations(conceptUUID1, 3, expectedAnnCount1, expectedRecentAnnCount1)
+
+	conceptUUID2 := uuid.New().String()
+	expectedAnnCount2 := 10
+	expectedRecentAnnCount2 := 0
+	suite.writeTestConceptWithAnnotations(conceptUUID2, 1, expectedAnnCount2, expectedRecentAnnCount2)
+
+	uuids := []string{
+		conceptUUID1,
+		conceptUUID2,
+	}
+
+	ac := NewAnnotationsCounter(suite.driver)
+	counts, err := ac.Count(uuids)
+	assert.NoError(suite.T(), err)
+	assert.Len(suite.T(), counts, 2)
+	assert.Equal(suite.T(), int64(expectedAnnCount1), counts[conceptUUID1].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedRecentAnnCount1), counts[conceptUUID1].PrevWeekAnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedAnnCount2), counts[conceptUUID2].AnnotationsCount)
+	assert.Equal(suite.T(), int64(expectedRecentAnnCount2), counts[conceptUUID2].PrevWeekAnnotationsCount)
 }
 
 func getNeoTestURL(t *testing.T) string {
@@ -151,8 +180,8 @@ func getNeoTestURL(t *testing.T) string {
 	return url
 }
 
-func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(conceptPrefUUID string, equivalentConcepts, annotationCount int) {
-	//creation of canonical concept node
+func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(conceptPrefUUID string, equivalentConcepts, totalAnnCount, recentAnnCount int) {
+	// Create canonical concept node.
 	canonicalQ := &cmneo4j.Query{
 		Cypher: "CREATE (n:Concept{prefUUID: $prefUUID})",
 		Params: map[string]interface{}{"prefUUID": conceptPrefUUID},
@@ -160,6 +189,7 @@ func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(concep
 	err := suite.driver.Write(canonicalQ)
 	require.NoError(suite.T(), err)
 
+	var sources []string
 	for i := 0; i < equivalentConcepts; i++ {
 		// create equivalent node
 		equivalentConceptUUID := uuid.New().String()
@@ -171,31 +201,34 @@ func (suite *AnnotationsCounterTestSuite) writeTestConceptWithAnnotations(concep
 		err = suite.driver.Write(sourceQ)
 		require.NoError(suite.T(), err)
 
-		//create annotations
-		subCount := annotationCount / equivalentConcepts
-		if i == 0 {
-			subCount += annotationCount % equivalentConcepts
+		sources = append(sources, equivalentConceptUUID)
+	}
+
+	// Create annotations.
+	writtenRecentAnn := 0
+	for i := 0; i < totalAnnCount; i++ {
+		isRecent := false
+		if writtenRecentAnn < recentAnnCount {
+			isRecent = true
 		}
 
-		now := time.Now().Unix()
-		for j := 0; j < subCount; j++ {
-			isRecent := j%3 == 0
+		// Get random source.
+		sourceInd := rand.Int31n(int32(len(sources)))
+		source := sources[sourceInd]
 
-			var pubDate int64
-			if isRecent {
-				pubDate = now
-			} else {
-				pubDate = now - 7*24*3600 - 24*3600
-			}
-
-			contentQ := &cmneo4j.Query{
-				Cypher: "MATCH (n:Concept{uuid: $uuid}) CREATE (n)<-[:REL]-(c:Content{publishedDateEpoch: $pubDate})",
-				Params: map[string]interface{}{"uuid": equivalentConceptUUID, "pubDate": pubDate},
-			}
-			err = suite.driver.Write(contentQ)
-			require.NoError(suite.T(), err)
+		pubDate := time.Now().Unix()
+		if !isRecent {
+			pubDate = pubDate - 7*24*3600 - 24*3600
 		}
 
+		contentQ := &cmneo4j.Query{
+			Cypher: "MATCH (n:Concept{uuid: $uuid}) CREATE (n)<-[:REL]-(c:Content{publishedDateEpoch: $pubDate})",
+			Params: map[string]interface{}{"uuid": source, "pubDate": pubDate},
+		}
+		err = suite.driver.Write(contentQ)
+		require.NoError(suite.T(), err)
+
+		writtenRecentAnn++
 	}
 }
 
