@@ -1,6 +1,6 @@
 module github.com/Financial-Times/neo4j-metric-aggregator
 
-go 1.17
+go 1.22
 
 require (
 	github.com/Financial-Times/cm-neo4j-driver v1.1.0
